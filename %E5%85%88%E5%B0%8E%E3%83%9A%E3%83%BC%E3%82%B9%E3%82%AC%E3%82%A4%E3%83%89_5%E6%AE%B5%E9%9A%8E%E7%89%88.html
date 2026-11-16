@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>先導ペースガイド</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#edf2f1;color:#172e32;font-family:system-ui,sans-serif}
+main{max-width:560px;margin:auto;padding:24px 18px 36px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:23px;margin:0}p{line-height:1.7}
+.tag{font-size:12px;background:#dce7e4;padding:7px 10px;border-radius:20px}
+.card{background:white;border-radius:24px;padding:24px;margin-top:20px;box-shadow:0 8px 32px #163b3110}
+.meter{text-align:center}
+.label{font-size:14px;color:#566d70}
+.number{font-size:clamp(64px,19vw,104px);font-weight:750;line-height:1.2;font-variant-numeric:tabular-nums;letter-spacing:-5px;margin:12px 0}
+.unit{font-size:17px}
+#other{margin:12px 0;color:#566d70;min-height:24px}
+#advice{font-size:21px;font-weight:700;padding:16px 8px;border-radius:14px;background:#eaf1ef;margin-top:20px}
+#advice.good{background:#d7f4e6;color:#09603d}
+#advice.slightfast{background:#fff0dc;color:#8b4900}
+#advice.fast{background:#ffe0d5;color:#a32f19}
+#advice.slowslight{background:#e2edff;color:#234c8e}
+#advice.slow{background:#d8e0ff;color:#172f83}
+#status{font-size:14px;min-height:24px;overflow-wrap:anywhere}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{display:block;font-size:14px}
+input,select,button{font:inherit}
+input[type=number],select{width:100%;margin-top:8px;padding:13px;border:1px solid #c4d2d0;border-radius:11px;background:#fff;color:#172e32;font-size:17px}
+button{border:0;border-radius:13px;padding:15px 12px;min-height:50px;background:#e6eeeb;color:#173c35;font-weight:650;cursor:pointer}
+button.primary{background:#146c56;color:#fff}
+button.stop{background:#f5dfdc;color:#9b3226}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #e6ac35;outline-offset:3px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.actions .wide{grid-column:1/-1}
+.check{display:flex;align-items:center;gap:9px;margin-top:18px;min-height:36px}
+.check input{width:20px;height:20px}
+.small{font-size:13px;color:#566d70;margin-bottom:0}
+#demoPanel{background:#fff2d9;border-radius:15px;padding:16px;margin-top:18px}
+#demoPanel input{width:100%;margin-top:16px}
+[hidden]{display:none!important}
+details{margin-top:22px;font-size:14px;color:#496263}
+summary{cursor:pointer}
+</style>
+<main>
+<header><h1>先導ペースガイド</h1><span class="tag" id="mode">待機中</span></header>
+<p class="label">顔を上げて、ペースを耳で確認。</p>
+<section class="card meter">
+<div class="label" id="readingLabel">現在の分速</div>
+<div class="number" id="speed">—</div>
+<div class="unit">メートル / 分</div>
+<div id="other">時速 — ・ 1km —</div>
+<div id="advice">目標を設定して開始</div>
+<p id="status" role="status">GPSは開始ボタンを押すと使用します。</p>
+</section>
+
+<section class="card">
+<div class="grid">
+<label>目標の分速（m/分）
+<input id="target" type="number" min="30" max="600" step="1" value="250" inputmode="numeric"></label>
+<label>許容幅（± m/分）
+<input id="tolerance" type="number" min="1" max="100" step="1" value="10" inputmode="numeric"></label>
+<label>読み上げ間隔
+<select id="interval"><option value="5">5秒ごと</option><option value="10">10秒ごと</option><option value="15">15秒ごと</option><option value="30">30秒ごと</option></select></label>
+<label>音声の速さ
+<select id="rate"><option value="1">ふつう</option><option value="1.2" selected>少し速い</option><option value="1.4">速い</option></select></label>
+</div>
+<label class="check"><input type="checkbox" id="voice" checked>音声で知らせる</label>
+<label class="check"><input type="checkbox" id="coach" checked>速度に応じたアドバイスを付ける</label>
+<p class="small" id="targetInfo"></p>
+<div class="actions">
+<button id="test">音声テスト</button>
+<button id="demo">デモを試す</button>
+<button id="start" class="primary wide">GPSで開始</button>
+<button id="stop" class="stop wide" disabled>停止</button>
+</div>
+<div id="demoPanel" hidden>
+<strong>デモモード：実際の速度ではありません</strong>
+<label style="margin-top:12px">試す分速：<span id="demoValue">250</span> m/分
+<input id="demoSpeed" type="range" min="0" max="450" step="1" value="250"></label>
+</div>
+<p id="audioStatus" class="small" role="status"></p>
+<p id="wakeStatus" class="small"></p>
+</section>
+<details>
+<summary>使い方・測定について</summary>
+<p>① 目標分速と許容幅を設定。<br>② イヤホンを接続し、音声テスト。<br>③ GPSで開始し、位置情報を許可してください。</p>
+<p>例：目標250、許容幅10なら、229m/分以下「遅いです」、230〜239「少し遅いです」、240〜260「ちょうどいいです」、261〜270「少し速いです」、271以上「速いです」の5段階で案内します。</p>
+<p>GPS速度は直近約3秒の値を平均するため、変化への反応には遅れがあります。</p>
+<p>速度情報が取得できない場合は、位置の変化から推定します。精度不足や10秒以上更新がない場合は数値と速度アドバイスを止めます。位置情報はこのページから外部へ送信しません。</p>
+<p>画面を表示したまま使用してください。画面ロックやアプリ切り替えによる測定・音声の継続は保証できません。周囲の音や大会スタッフの声が聞こえる音量で、走行前に動作を確認してください。</p>
+</details>
+</main>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+let running=false, demo=false, watch=null, timer=null, wake=null;
+let samples=[], baseline=null, lastGood=0, current=null, lastSpoken=0;
+let reason='', generation=0, estimated=false, accuracy=null;
+
+function validSettings(){
+ const t=+$('target').value, w=+$('tolerance').value;
+ return Number.isFinite(t)&&t>=30&&t<=600 &&
+        Number.isFinite(w)&&w>=1&&w<=100;
+}
+function pace(v){
+ if(v<=0)return '—';
+ const seconds=Math.round(60000/v);
+ return Math.floor(seconds/60)+'分'+String(seconds%60).padStart(2,'0')+'秒';
+}
+function targetInfo(){
+ $('targetInfo').textContent=validSettings()
+ ? `目安 ${+$('target').value-+$('tolerance').value}〜${+$('target').value+ +$('tolerance').value} m/分 · 時速${(+$('target').value*.06).toFixed(1)}km`
+ : '目標は30〜600、許容幅は1〜100で入力してください。';
+}
+function advice(v){
+ const d=v-+$('target').value, w=+$('tolerance').value;
+ if(d< -2*w)return ['遅いです。','slow'];
+ if(d< -w)return ['少し遅いです。','slowslight'];
+ if(d<=w)return ['ちょうどいいです。','good'];
+ if(d<=2*w)return ['少し速いです。','slightfast'];
+ return ['速いです。','fast'];
+}
+function speak(text, force=false){
+ if(!('speechSynthesis' in window)){
+  $('audioStatus').textContent='このブラウザでは音声読み上げを使用できません。';return;
+ }
+ if(!force&&!$('voice').checked)return;
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang='ja-JP';u.rate=+$('rate').value;
+ const voices=speechSynthesis.getVoices();
+ const jp=voices.find(v=>/^ja/i.test(v.lang));
+ if(jp)u.voice=jp;
+ u.onerror=e=>{
+  if(!['interrupted','canceled'].includes(e.error))
+   $('audioStatus').textContent='音声が再生できません。音声テストと端末の音量を確認してください。';
+ };
+ speechSynthesis.speak(u);
+}
+async function keepAwake(){
+ if(!running||document.visibilityState!=='visible')return;
+ if(!('wakeLock' in navigator)){
+  $('wakeStatus').textContent='画面の自動ロックを手動でオフにしてください。';return;
+ }
+ if(wake)return;
+ try{
+  const token=generation;
+  const lock=await navigator.wakeLock.request('screen');
+  if(!running||token!==generation){await lock.release();return;}
+  wake=lock;
+  $('wakeStatus').textContent='画面の自動消灯を抑止中';
+  lock.addEventListener('release',()=>{
+   if(wake===lock){wake=null;$('wakeStatus').textContent='画面を表示したまま使用してください。';}
+  });
+ }catch{
+  $('wakeStatus').textContent='画面の自動ロックを手動でオフにしてください。';
+ }
+}
+function accept(v,time,isEstimate){
+ if(!Number.isFinite(v)||v<0||v>1200){invalidate('速度を確認できません。');return;}
+ samples=samples.filter(s=>time-s.t<3000);
+ samples.push({v,t:time});
+ current=samples.reduce((sum,s)=>sum+s.v,0)/samples.length;
+ lastGood=time;estimated=isEstimate;reason='';
+}
+function invalidate(message){
+ current=null;samples=[];reason=message;
+}
+function distance(a,b){
+ const rad=Math.PI/180;
+ const dlat=(b.latitude-a.latitude)*rad;
+ const dlon=(b.longitude-a.longitude)*rad;
+ const h=Math.sin(dlat/2)**2+
+ Math.cos(a.latitude*rad)*Math.cos(b.latitude*rad)*Math.sin(dlon/2)**2;
+ return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));
+}
+function position(p){
+ if(!running||demo)return;
+ const c=p.coords,t=p.timestamp;
+ if(!Number.isFinite(t)||Date.now()-t>10000)return;
+ accuracy=c.accuracy;
+ if(!Number.isFinite(accuracy)||accuracy>30){
+  baseline=null;invalidate('GPSの精度が不足しています。開けた場所でお待ちください。');return;
+ }
+ if(Number.isFinite(c.speed)&&c.speed>=0){
+  baseline={c,t};accept(c.speed*60,t,false);return;
+ }
+ if(!baseline){baseline={c,t};invalidate('位置の変化から速度を確認中です。');return;}
+ const dt=(t-baseline.t)/1000;
+ if(dt<=0)return;
+ if(dt>15){baseline={c,t};invalidate('位置の変化を再確認中です。');return;}
+ if(dt<4)return;
+ const d=distance(baseline.c,c);
+ const uncertainty=Math.max(8,baseline.c.accuracy+c.accuracy);
+ if(d<uncertainty){
+  invalidate('速度を確定できません。停止中、またはGPS精度が不足しています。');return;
+ }
+ accept(d/dt*60,t,true);baseline={c,t};
+}
+function render(){
+ const now=Date.now();
+ if(demo&&running)accept(+$('demoSpeed').value,now,false);
+ if(current!==null&&now-lastGood>10000)invalidate('GPSの更新が止まっています。');
+ const good=current!==null;
+ $('speed').textContent=good?Math.round(current):'—';
+ $('other').textContent=good?`時速 ${(current*.06).toFixed(1)} km/h ・ 1km ${pace(current)}`:'時速 — ・ 1km —';
+ let text='GPSを確認中です', cls='';
+ if(good)[text,cls]=advice(current);
+ $('advice').textContent=text;$('advice').className=cls;
+ $('status').textContent=demo?'デモの速度です。GPSは使用していません。':
+ good?`${estimated?'位置の変化から推定':'GPS速度'} · 位置精度の目安 ±${Math.round(accuracy)}m`:
+ reason||'位置情報の許可・受信を待っています。';
+ if(running&&now-lastSpoken>=+$('interval').value*1000){
+  lastSpoken=now;
+  speak(good
+   ?`${demo?'デモ。':''}分速${Math.round(current)}メートル。${$('coach').checked?text:''}`
+   :'GPSを確認中です。');
+ }
+}
+function stop(){
+ running=false;generation++;
+ if(watch!==null){navigator.geolocation.clearWatch(watch);watch=null;}
+ clearInterval(timer);timer=null;
+ if('speechSynthesis'in window)speechSynthesis.cancel();
+ if(wake){const old=wake;wake=null;old.release().catch(()=>{});}
+ current=null;samples=[];baseline=null;
+ $('start').disabled=false;$('demo').disabled=false;$('stop').disabled=true;
+ ['target','tolerance'].forEach(id=>$(id).disabled=false);
+ $('mode').textContent='停止中';
+ $('speed').textContent='—';$('other').textContent='時速 — ・ 1km —';
+ $('advice').textContent='停止しました';$('advice').className='';
+ $('status').textContent='再開すると新しい速度を測定します。';
+ $('demoPanel').hidden=true;$('wakeStatus').textContent='';
+ $('readingLabel').textContent='現在の分速';
+}
+function start(asDemo){
+ if(!validSettings()){targetInfo();$('target').focus();return;}
+ if(!asDemo&&(!window.isSecureContext||!navigator.geolocation)){
+  $('status').textContent='GPSには位置情報を利用できるHTTPSページが必要です。デモをお試しください。';return;
+ }
+ stop();demo=asDemo;running=true;generation++;
+ const token=generation;
+ reason='';lastGood=0;lastSpoken=Date.now();
+ $('start').disabled=true;$('demo').disabled=true;$('stop').disabled=false;
+ ['target','tolerance'].forEach(id=>$(id).disabled=true);
+ $('mode').textContent=demo?'デモ中':'GPS測定中';
+ $('readingLabel').textContent=demo?'デモの分速':'現在の分速';
+ $('demoPanel').hidden=!demo;$('audioStatus').textContent='';
+ speak(demo?'デモを開始します。':'測定を開始します。');
+ keepAwake();render();timer=setInterval(render,500);
+ if(!demo){
+  try{
+   watch=navigator.geolocation.watchPosition(
+    p=>{if(token===generation)position(p);},
+    e=>{
+     if(token!==generation)return;
+     if(e.code===1){
+      stop();
+      $('status').textContent='位置情報が許可されていません。ブラウザの位置情報設定を確認してください。プレビューの制限でも発生します。';
+     }else{
+      baseline=null;invalidate('GPSを取得できません。受信を待っています。');
+     }
+    },
+    {enableHighAccuracy:true,maximumAge:0,timeout:12000}
+   );
+  }catch{
+   stop();$('status').textContent='この画面ではGPSを開始できません。デモでお試しください。';
+  }
+ }
+}
+$('start').onclick=()=>start(false);
+$('demo').onclick=()=>start(true);
+$('stop').onclick=stop;
+$('test').onclick=()=>{
+ $('audioStatus').textContent='聞こえない場合は、端末の音量とイヤホンの接続を確認してください。';
+ speak('音声テスト。分速250メートル。ちょうどいいです。',true);
+};
+$('demoSpeed').oninput=()=>{
+ $('demoValue').textContent=$('demoSpeed').value;
+ if(demo){samples=[];render();}
+};
+$('voice').onchange=()=>{
+ if(!$('voice').checked&&'speechSynthesis'in window)speechSynthesis.cancel();
+};
+['target','tolerance'].forEach(id=>$(id).oninput=targetInfo);
+document.addEventListener('visibilitychange',()=>{
+ if(running&&document.visibilityState==='visible'){
+  if(!demo){baseline=null;invalidate('GPSを再確認中です。');}
+  lastSpoken=Date.now();keepAwake();render();
+ }
+});
+window.addEventListener('pagehide',stop);
+targetInfo();
+})();
+</script>
+</html>
